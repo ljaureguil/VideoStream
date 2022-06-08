@@ -1,173 +1,211 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
-    <title>CubemapToEquirectangular - Managed</title>
+    <title>Video Streamer</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <style>
-        body {
-            font-family: Monospace;
-            background-color: #f0f0f0;
-            color: white;
-            margin: 0px;
-            overflow: hidden;
-        }
-      
-    </style>
+ 
 </head>
 
+    <style>
+
+    </style>
+<canvas width="300" height="300"></canvas>
+<video autoplay controls></video>
+
+<script>
+var canvas = document.querySelector("canvas");
+var ctx = canvas.getContext("2d");
+
+var video = document.querySelector("video");
+
+var colors = ["red", "blue", "yellow", "orange", "black", "white", "green"];
+function draw (){
+	ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+draw();
+
+var videoStream = canvas.captureStream(30);
+var mediaRecorder = new MediaRecorder(videoStream);
+
+var chunks = [];
+mediaRecorder.ondataavailable = function(e) {
+  chunks.push(e.data);
+};
+
+mediaRecorder.onstop = function(e) {
+  var blob = new Blob(chunks, { 'type' : 'video/mp4' });
+  chunks = [];
+  var videoURL = URL.createObjectURL(blob);
+  video.src = videoURL;
+};
+mediaRecorder.ondataavailable = function(e) {
+  chunks.push(e.data);
+};
+
+mediaRecorder.start();
+var idr=setInterval(draw, 300);
+setTimeout(function (){ 
+    clearInterval(idr);
+    mediaRecorder.stop(); }, 5000);
+
+</script>
 <body>
 
     <canvas id="canvas" width="500" height="200"></canvas>
     <button id="rec" disabled>record</button>
     <script>
-     var cStream,
-  aStream,
-  vid,
-  recorder,
-  analyser,
-  dataArray,
-  bufferLength,
-  chunks = [];
+        var cStream,
+            aStream,
+            vid,
+            recorder,
+            analyser,
+            dataArray,
+            bufferLength,
+            chunks = [];
 
-function clickHandler() {
+        function clickHandler() {
 
-  this.textContent = 'stop recording';
-  cStream = canvas.captureStream(30);
-  cStream.addTrack(aStream.getAudioTracks()[0]);
+            this.textContent = 'stop recording';
+            cStream = canvas.captureStream(30);
+            cStream.addTrack(aStream.getAudioTracks()[0]);
 
-  var mixedStream = 'MediaStream' in window ? new MediaStream([cStream.getVideoTracks()[0], aStream.getAudioTracks()[0]]) : cStream;
-  recorder = new MediaRecorder(mixedStream);
-  recorder.start();
+            var mixedStream = 'MediaStream' in window ? new MediaStream([cStream.getVideoTracks()[0], aStream.getAudioTracks()[0]]) : cStream;
+            recorder = new MediaRecorder(mixedStream);
+            recorder.start();
 
-  recorder.ondataavailable = saveChunks;
+            recorder.ondataavailable = saveChunks;
 
-  recorder.onstop = exportStream;
+            recorder.onstop = exportStream;
 
-  this.onclick = stopRecording;
+            this.onclick = stopRecording;
 
-};
+        };
 
-function exportStream(e) {
+        function exportStream(e) {
 
-  if (chunks.length) {
+            if (chunks.length) {
 
-    var blob = new Blob(chunks)
-    var vidURL = URL.createObjectURL(blob);
-    var vid = document.createElement('video');
-    vid.controls = true;
-    vid.src = vidURL;
-    vid.onend = function() {
-      URL.revokeObjectURL(vidURL);
-    }
-    document.body.insertBefore(vid, canvas);
+                var blob = new Blob(chunks)
+                var vidURL = URL.createObjectURL(blob);
+                var vid = document.createElement('video');
+                vid.controls = true;
+                vid.src = vidURL;
+                vid.onend = function () {
+                    URL.revokeObjectURL(vidURL);
+                }
+                document.body.insertBefore(vid, canvas);
 
-  } else {
+            } else {
 
-    document.body.insertBefore(document.createTextNode('no data saved'), canvas);
+                document.body.insertBefore(document.createTextNode('no data saved'), canvas);
 
-  }
-}
+            }
+        }
 
-function saveChunks(e) {
+        function saveChunks(e) {
 
-  e.data.size && chunks.push(e.data);
+            e.data.size && chunks.push(e.data);
 
-}
+        }
 
-function stopRecording() {
+        function stopRecording() {
 
-  vid.pause();
-	this.disabled = true;
-  recorder.stop();
+            vid.pause();
+            this.disabled = true;
+            recorder.stop();
 
-}
+        }
 
-function initAudioStream(evt) {
+        function initAudioStream(evt) {
 
-  var audioCtx = new AudioContext();
-  // create a stream from our AudioContext
-  var dest = audioCtx.createMediaStreamDestination();
-  aStream = dest.stream;
-  // connect our video element's output to the stream
-  var sourceNode = audioCtx.createMediaElementSource(this);
-  sourceNode.connect(dest)
-    // start the video
-  this.play();
+            var audioCtx = new AudioContext();
+            // create a stream from our AudioContext
+            var dest = audioCtx.createMediaStreamDestination();
+            aStream = dest.stream;
+            // connect our video element's output to the stream
+            var sourceNode = audioCtx.createMediaElementSource(this);
+            sourceNode.connect(dest);
+            a=this;
+            // start the video
+          setTimeout(function(){
+                a.play();},5000)
 
-  // just for the fancy canvas drawings
-  analyser = audioCtx.createAnalyser();
-  sourceNode.connect(analyser);
+            // just for the fancy canvas drawings
+            analyser = audioCtx.createAnalyser();
+            sourceNode.connect(analyser);
 
-  analyser.fftSize = 2048;
-  bufferLength = analyser.frequencyBinCount;
-  dataArray = new Uint8Array(bufferLength);
-  analyser.getByteTimeDomainData(dataArray);
+            analyser.fftSize = 2048;
+            bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(dataArray);
 
-  // output to our headphones
-  sourceNode.connect(audioCtx.destination)
+            // output to our headphones
+            sourceNode.connect(audioCtx.destination)
 
-  startCanvasAnim();
+            startCanvasAnim();
 
-  rec.onclick = clickHandler;
-  rec.disabled = false;
-};
+            rec.onclick = clickHandler;
+            rec.disabled = false;
+        };
 
-var loadVideo = function() {
+        var loadVideo = function () {
 
-  vid = document.createElement('video');
-  vid.crossOrigin = 'anonymous';
-  vid.oncanplay = initAudioStream;
-  vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
+            vid = document.createElement('video');
+            vid.crossOrigin = 'anonymous';
+            vid.oncanplay = initAudioStream;
+            vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
 
-  
-}
 
-function startCanvasAnim() {
-  // from MDN https://developer.mozilla.org/en/docs/Web/API/AnalyserNode#Examples
-  var canvasCtx = canvas.getContext('2d');
+        }
 
-  canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-  canvasCtx.lineWidth = 2;
-  canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+        function startCanvasAnim() {
+            // from MDN https://developer.mozilla.org/en/docs/Web/API/AnalyserNode#Examples
+            var canvasCtx = canvas.getContext('2d');
 
-  var draw = function() {
+            canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
 
-    var drawVisual = requestAnimationFrame(draw);
+            var draw = function () {
 
-    analyser.getByteTimeDomainData(dataArray);
+                var drawVisual = requestAnimationFrame(draw);
 
-    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-    canvasCtx.beginPath();
+                analyser.getByteTimeDomainData(dataArray);
 
-    var sliceWidth = canvas.width * 1.0 / bufferLength;
-    var x = 0;
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                canvasCtx.beginPath();
 
-    for (var i = 0; i < bufferLength; i++) {
+                var sliceWidth = canvas.width * 1.0 / bufferLength;
+                var x = 0;
 
-      var v = dataArray[i] / 128.0;
-      var y = v * canvas.height / 2;
+                for (var i = 0; i < bufferLength; i++) {
 
-      if (i === 0) {
-        canvasCtx.moveTo(x, y);
-      } else {
-        canvasCtx.lineTo(x, y);
-      }
+                    var v = dataArray[i] / 128.0;
+                    var y = v * canvas.height / 2;
 
-      x += sliceWidth;
-    }
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
 
-    canvasCtx.lineTo(canvas.width, canvas.height / 2);
-    canvasCtx.stroke();
+                    x += sliceWidth;
+                }
 
-  };
+                canvasCtx.lineTo(canvas.width, canvas.height / 2);
+                canvasCtx.stroke();
 
-  draw();
+            };
 
-}
+            draw();
 
-loadVideo();
+        }
+
+        loadVideo();
     </script>
 
 </body>
