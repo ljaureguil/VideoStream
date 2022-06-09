@@ -10,202 +10,175 @@
 </head>
 
     <style>
-
+#aud{background: red;
+width: 100px;
+height: 100px;}
     </style>
-<canvas width="300" height="300"></canvas>
-<video autoplay controls></video>
+<canvas id="canvas" width="300" height="300"></canvas>
+<video id="v" autoplay controls></video>
 
+aqui va el audio..
+<audio id="aud" controls>
+<source src="horns.mp3">
+
+</audio>
+..emtre
+
+
+<button id="rec" disabled>record</button>
 <script>
-var canvas = document.querySelector("canvas");
-var ctx = canvas.getContext("2d");
-
-var video = document.querySelector("video");
-
-var colors = ["red", "blue", "yellow", "orange", "black", "white", "green"];
-function draw (){
-	ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-draw();
-
-var videoStream = canvas.captureStream(30);
-var mediaRecorder = new MediaRecorder(videoStream);
-
-var chunks = [];
-mediaRecorder.ondataavailable = function(e) {
-  chunks.push(e.data);
-};
-
-mediaRecorder.onstop = function(e) {
-  var blob = new Blob(chunks, { 'type' : 'video/mp4' });
+var cStream,
+  aStream,
+  vid,
+  recorder,
+  analyser,
+  dataArray,
+  bufferLength,
   chunks = [];
-  var videoURL = URL.createObjectURL(blob);
-  video.src = videoURL;
+
+function clickHandler() {
+
+  this.textContent = 'stop recording';
+  cStream = canvas.captureStream(30);
+  cStream.addTrack(aStream.getAudioTracks()[0]);
+ //cStream.addTrack(aud.getAudioTracks()[0]);
+
+  var mixedStream = 'MediaStream' in window ? new MediaStream([cStream.getVideoTracks()[0], aStream.getAudioTracks()[0]]) : cStream;
+  recorder = new MediaRecorder(mixedStream);
+  recorder.start();
+
+  recorder.ondataavailable = saveChunks;
+
+  recorder.onstop = exportStream;
+
+  this.onclick = stopRecording;
+
 };
-mediaRecorder.ondataavailable = function(e) {
-  chunks.push(e.data);
+
+function exportStream(e) {
+
+  if (chunks.length) {
+
+    var blob = new Blob(chunks)
+    var vidURL = URL.createObjectURL(blob);
+    var vid = document.createElement('video');
+    vid.controls = true;
+    vid.src = vidURL;
+    vid.onend = function() {
+      URL.revokeObjectURL(vidURL);
+    }
+    document.body.insertBefore(vid, canvas);
+
+  } else {
+
+    document.body.insertBefore(document.createTextNode('no data saved'), canvas);
+
+  }
+}
+
+function saveChunks(e) {
+
+  e.data.size && chunks.push(e.data);
+
+}
+
+function stopRecording() {
+
+  vid.pause();
+	this.disabled = true;
+  recorder.stop();
+
+}
+
+function initAudioStream(evt) {
+
+  var audioCtx = new AudioContext();
+  // create a stream from our AudioContext
+  var dest = audioCtx.createMediaStreamDestination();
+  aStream = dest.stream;
+  // connect our video element's output to the stream
+  aStream = dest.stream;
+   var sourceNode = audioCtx.createMediaElementSource(this);
+  sourceNode.connect(dest)
+    // start the video
+  this.play();
+
+  // just for the fancy canvas drawings
+  analyser = audioCtx.createAnalyser();
+  sourceNode.connect(analyser);
+
+  analyser.fftSize = 2048;
+  bufferLength = analyser.frequencyBinCount;
+  dataArray = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(dataArray);
+
+  // output to our headphones
+  sourceNode.connect(audioCtx.destination)
+
+  startCanvasAnim();
+  clickHandler()
+  //rec.onclick = clickHandler;
+  rec.disabled = false;
+
 };
 
-mediaRecorder.start();
-var idr=setInterval(draw, 300);
-setTimeout(function (){ 
-    clearInterval(idr);
-    mediaRecorder.stop(); }, 5000);
+var loadVideo = function() {
 
-</script>
-<body>
+ // vid = document.createElement('video');
+ // document.body.appendChild(vid)
+ vid=v
+  vid.crossOrigin = 'anonymous';
+  vid.onplay=initAudioStream;
+//vid.oncanplay = initAudioStream;
+  vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
 
-    <canvas id="canvas" width="500" height="200"></canvas>
-    <button id="rec" disabled>record</button>
-    <script>
-        var cStream,
-            aStream,
-            vid,
-            recorder,
-            analyser,
-            dataArray,
-            bufferLength,
-            chunks = [];
+  
+}
 
-        function clickHandler() {
+function startCanvasAnim() {
+  // from MDN https://developer.mozilla.org/en/docs/Web/API/AnalyserNode#Examples
+  var canvasCtx = canvas.getContext('2d');
 
-            this.textContent = 'stop recording';
-            cStream = canvas.captureStream(30);
-            cStream.addTrack(aStream.getAudioTracks()[0]);
+  canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
 
-            var mixedStream = 'MediaStream' in window ? new MediaStream([cStream.getVideoTracks()[0], aStream.getAudioTracks()[0]]) : cStream;
-            recorder = new MediaRecorder(mixedStream);
-            recorder.start();
+  var draw = function() {
 
-            recorder.ondataavailable = saveChunks;
+    var drawVisual = requestAnimationFrame(draw);
 
-            recorder.onstop = exportStream;
+    analyser.getByteTimeDomainData(dataArray);
 
-            this.onclick = stopRecording;
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.beginPath();
 
-        };
+    var sliceWidth = canvas.width * 1.0 / bufferLength;
+    var x = 0;
 
-        function exportStream(e) {
+    for (var i = 0; i < bufferLength; i++) {
 
-            if (chunks.length) {
+      var v = dataArray[i] / 128.0;
+      var y = v * canvas.height / 2;
 
-                var blob = new Blob(chunks)
-                var vidURL = URL.createObjectURL(blob);
-                var vid = document.createElement('video');
-                vid.controls = true;
-                vid.src = vidURL;
-                vid.onend = function () {
-                    URL.revokeObjectURL(vidURL);
-                }
-                document.body.insertBefore(vid, canvas);
+      if (i === 0) {
+        canvasCtx.moveTo(x, y);
+      } else {
+        canvasCtx.lineTo(x, y);
+      }
 
-            } else {
+      x += sliceWidth;
+    }
 
-                document.body.insertBefore(document.createTextNode('no data saved'), canvas);
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
 
-            }
-        }
+  };
 
-        function saveChunks(e) {
+  draw();
 
-            e.data.size && chunks.push(e.data);
+}
 
-        }
-
-        function stopRecording() {
-
-            vid.pause();
-            this.disabled = true;
-            recorder.stop();
-
-        }
-
-        function initAudioStream(evt) {
-
-            var audioCtx = new AudioContext();
-            // create a stream from our AudioContext
-            var dest = audioCtx.createMediaStreamDestination();
-            aStream = dest.stream;
-            // connect our video element's output to the stream
-            var sourceNode = audioCtx.createMediaElementSource(this);
-            sourceNode.connect(dest);
-            a=this;
-            // start the video
-          setTimeout(function(){
-                a.play();},5000)
-
-            // just for the fancy canvas drawings
-            analyser = audioCtx.createAnalyser();
-            sourceNode.connect(analyser);
-
-            analyser.fftSize = 2048;
-            bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-            analyser.getByteTimeDomainData(dataArray);
-
-            // output to our headphones
-            sourceNode.connect(audioCtx.destination)
-
-            startCanvasAnim();
-
-            rec.onclick = clickHandler;
-            rec.disabled = false;
-        };
-
-        var loadVideo = function () {
-
-            vid = document.createElement('video');
-            vid.crossOrigin = 'anonymous';
-            vid.oncanplay = initAudioStream;
-            vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
-
-
-        }
-
-        function startCanvasAnim() {
-            // from MDN https://developer.mozilla.org/en/docs/Web/API/AnalyserNode#Examples
-            var canvasCtx = canvas.getContext('2d');
-
-            canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-            canvasCtx.lineWidth = 2;
-            canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
-
-            var draw = function () {
-
-                var drawVisual = requestAnimationFrame(draw);
-
-                analyser.getByteTimeDomainData(dataArray);
-
-                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-                canvasCtx.beginPath();
-
-                var sliceWidth = canvas.width * 1.0 / bufferLength;
-                var x = 0;
-
-                for (var i = 0; i < bufferLength; i++) {
-
-                    var v = dataArray[i] / 128.0;
-                    var y = v * canvas.height / 2;
-
-                    if (i === 0) {
-                        canvasCtx.moveTo(x, y);
-                    } else {
-                        canvasCtx.lineTo(x, y);
-                    }
-
-                    x += sliceWidth;
-                }
-
-                canvasCtx.lineTo(canvas.width, canvas.height / 2);
-                canvasCtx.stroke();
-
-            };
-
-            draw();
-
-        }
-
-        loadVideo();
+loadVideo();
     </script>
 
 </body>
