@@ -34,7 +34,7 @@ height: 40%;}
 </div>
 
 
-<canvas id="canvas" width="300" height="300"></canvas>
+<canvas id="canvas" width="900" height="600"></canvas>
 <video id="v" autoplay controls></video>...<img id="im">
 
 <audio id="aud" controls>
@@ -249,10 +249,10 @@ function startCanvasAnim2() {
 
     canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
     canvasCtx.beginPath();
-    canvasCtx.drawImage(im,0,0,400,277)
+    canvasCtx.drawImage(im,0,0,900,600)
     var sliceWidth = canvas.width * 1.0 / bufferLength;
     var x = 0;
-
+/*
     for (var i = 0; i < bufferLength; i++) {
 
       var v = dataArray[i] / 128.0;
@@ -269,7 +269,7 @@ function startCanvasAnim2() {
 
     canvasCtx.lineTo(canvas.width, canvas.height / 2);
     canvasCtx.stroke();
-
+*/
   };
 
   draw();
