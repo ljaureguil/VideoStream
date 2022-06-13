@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <title>Video Streamer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+ 
+</head>
+
+    <style>
+#aud{background: red;
+width: 100px;
+height: 100px;}
+#aud{
+  display: none;
+}
+#v{
+  width: 80%;
+}
+#im{width: 80%;}
+#canvas{width: 60%;
+height: 40%;}
+    </style>
+
+<div id="dd">
+  <div id="ilocal">
+    <br>Load Video:
+    <input type=file name=filename id=Vid oninput="test('Vid',this)" class=cte></input>
+    <br>Load Image:
+   <input type=file name=filename id=Img oninput="test('Img',this)" class=cte></input>
+  
+</div>
+
+
+<canvas id="canvas" width="900" height="600"></canvas>
+<video id="v" autoplay controls></video>...<img id="im">
+
+<audio id="aud" controls>
+<source src="horns.mp3">
+
+</audio>
+<br>
+
+
+
+</div>
+
+
+<button id="rec" disabled>record</button>
+<script>
+var cStream,
+  aStream,
+  vid,
+  recorder,
+  analyser,
+  dataArray,
+  bufferLength,
+  chunks = [],
+  vc=false;
+
+function clickHandler() {
+
+  this.textContent = 'stop recording';
+  cStream = canvas.captureStream(30);
+  cStream.addTrack(aStream.getAudioTracks()[0]);
+ //cStream.addTrack(aud.getAudioTracks()[0]);
+ //var mixedStream = 'MediaStream' in window ? new MediaStream([cStream.getVideoTracks()[0], aStream.getAudioTracks()[0]]) : cStream;
+ 
+  var mixedStream = 'MediaStream' in window ? new MediaStream([cStream.getVideoTracks()[0], aStream.getAudioTracks()[0]]) : cStream;
+  recorder = new MediaRecorder(mixedStream);
+  recorder.start();
+// mediaRecorder.ondataavailable = function(e) {
+ 
+    recorder.ondataavailable = function(e) {
+  chunks.push(e.data);
+};
+
+
+
+  //recorder.ondataavailable = saveChunks;
+
+  recorder.onstop = exportStream;
+
+  this.onclick = stopRecording;
+
+};
+////////////
+/*
+mediaRecorder.onstop = function(e) {
+  var blob = new Blob(chunks, { 'type' : 'video/mp4' });
+  chunks = [];
+  var videoURL = URL.createObjectURL(blob);
+  video.src = videoURL;
+};
+*/
+////////////
+function exportStream(e) {
+
+  if (chunks.length) {
+
+    var blob = new Blob(chunks, { 'type' : 'video/mp4' })
+    var vidURL = URL.createObjectURL(blob);
+    var vid = document.createElement('video');
+    vid.controls = true;
+    vid.src = vidURL;
+    vid.onend = function() {
+      URL.revokeObjectURL(vidURL);
+    }
+ document.body.insertBefore(vid, dd);
+     //  document.appendChild(vid)
+
+  } else {
+
+    document.body.insertBefore(document.createTextNode('no data saved'), canvas);
+
+  }
+}
+
+function saveChunks(e) {
+
+  e.data.size && chunks.push(e.data);
+
+}
+
+function stopRecording() {
+
+  vid.pause();
+	this.disabled = true;
+  recorder.stop();
+
+}
+
+function initAudioStream(evt) {
+if(!vc){
+
+    vc=true;
+    //crear objeto de audio
+  var audioCtx = new AudioContext();
+  // create a stream from our AudioContext, crear stream object from audio objeto es para preparar
+  var dest = audioCtx.createMediaStreamDestination();
+ // aStream = dest.stream;
+  // connect our video element's output to the stream, ya que esta asignar a aStream el stream *datos de dest
+  aStream = dest.stream;
+  // crear dom elemento como node del audio Ctx object
+   var sourceNode = audioCtx.createMediaElementSource(this);
+  // var sourceNode = audioCtx.createMediaElementSource(aud);
+  // sourceNode.connect(audioCtx.destination);
+   //conectarlo al des que es el stream object
+  sourceNode.connect(dest)
+    // start the video
+  this.play();
+  //aud.play()
+ // alert("ok")
+  
+ /* */
+  // just for the fancy canvas drawings
+  analyser = audioCtx.createAnalyser();
+  sourceNode.connect(analyser);
+
+  analyser.fftSize = 2048;
+  bufferLength = analyser.frequencyBinCount;
+  dataArray = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(dataArray);
+
+  // output to our headphones
+  sourceNode.connect(audioCtx.destination)
+
+  startCanvasAnim2();
+  clickHandler()
+  //rec.onclick = clickHandler;
+  rec.disabled = false;
+}
+else{
+    alert("ya inic")
+}
+};
+
+var loadVideo = function() {
+
+ // vid = document.createElement('video');
+ // document.body.appendChild(vid)
+ vid=v
+  vid.crossOrigin = 'anonymous';
+  vid.onplay=initAudioStream;
+//vid.oncanplay = initAudioStream;
+  vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
+ //  vid.src=viddata;
+  
+}
+
+function startCanvasAnim() {
+  // from MDN https://developer.mozilla.org/en/docs/Web/API/AnalyserNode#Examples
+  var canvasCtx = canvas.getContext('2d');
+
+  canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+
+  var draw = function() {
+
+    var drawVisual = requestAnimationFrame(draw);
+
+    analyser.getByteTimeDomainData(dataArray);
+
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.beginPath();
+
+    var sliceWidth = canvas.width * 1.0 / bufferLength;
+    var x = 0;
+
+    for (var i = 0; i < bufferLength; i++) {
+
+      var v = dataArray[i] / 128.0;
+      var y = v * canvas.height / 2;
+
+      if (i === 0) {
+        canvasCtx.moveTo(x, y);
+      } else {
+        canvasCtx.lineTo(x, y);
+      }
+
+      x += sliceWidth;
+    }
+
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
+
+  };
+
+  draw();
+
+}
+
+function startCanvasAnim2() {
+  // from MDN https://developer.mozilla.org/en/docs/Web/API/AnalyserNode#Examples
+  var canvasCtx = canvas.getContext('2d');
+
+  canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+
+  var draw = function() {
+
+    var drawVisual = requestAnimationFrame(draw);
+
+    analyser.getByteTimeDomainData(dataArray);
+
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.beginPath();
+    canvasCtx.drawImage(im,0,0,900,600)
+    var sliceWidth = canvas.width * 1.0 / bufferLength;
+    var x = 0;
+/*
+    for (var i = 0; i < bufferLength; i++) {
+
+      var v = dataArray[i] / 128.0;
+      var y = v * canvas.height / 2;
+
+      if (i === 0) {
+        canvasCtx.moveTo(x, y);
+      } else {
+        canvasCtx.lineTo(x, y);
+      }
+
+      x += sliceWidth;
+    }
+
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
+*/
+  };
+
+  draw();
+
+}
+loadVideo();
+
+function test(o,el){
+ // var file = document.getElementById(t).files[0];
+  var file = el.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                 //   var image = document.createElement("img");
+                 //   image.src = e.target.result;
+                  if(o==="Img"){
+                     im.src=e.target.result;
+  
+
+                 //    alert(im.src)
+                  } 
+                  if(o==="Vid"){
+                    v.src=e.target.result;
+                    v.onload=initAudioStream
+                  //  alert(v.src)
+                    v.onload=v.stop();
+                   
+                }
+                    alert(e.target.result);
+                    //   document.body.appendChild(image);
+               //     if (t === "Texture") ObSelected.name.pic = image.src;
+               //     if (t === "Bump") ObSelected.name.bump = image.src;
+               //     if (t === "Specular") ObSelected.name.specular = image.src;
+
+
+              //      if (ObSelected.name.name === "World" && !confirm("Are you sure you want to set this background?")) return;
+              //      else dparam.style.display = "block";
+               //     params.value = JSON.stringify(ObSelected.name).replace(/{/g, "{\n").replace(/}/g, "\n}").replace(/,/g, "\n");
+
+                //    applay(params.value)
+               }
+                reader.readAsDataURL(file);
+
+  if(o==="Vid"){
+   // alert(el.name)
+
+  }
+  if(o==="Img"){
+ //     alert(el.name)
+
+  }
+}
+    </script>
+
+</body>
+
+</html>
