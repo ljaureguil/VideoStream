@@ -28,13 +28,14 @@ height: 40%;}
   <div id="ilocal">
     <br>Load Video:
     <input type=file name=filename id=Vid oninput="test('Vid',this)" class=cte></input>
-    <br>Load Image:
+    .... Load Image:
    <input type=file name=filename id=Img oninput="test('Img',this)" class=cte></input>
   
 </div>
 
+<video id="vid"></video>
+<canvas id="canvas" width="900" height="600"></canvas>;
 
-<canvas id="canvas" width="900" height="600"></canvas>
 <video id="v" autoplay controls></video>...<img id="im">
 
 <audio id="aud" controls>
@@ -103,6 +104,9 @@ function exportStream(e) {
     var blob = new Blob(chunks, { 'type' : 'video/mp4' })
     var vidURL = URL.createObjectURL(blob);
     var vid = document.createElement('video');
+   
+    vid.height=im.naturalHeight;
+    vid.width=im.naturalWidth;
     vid.controls = true;
     vid.src = vidURL;
     vid.onend = function() {
@@ -139,12 +143,12 @@ if(!vc){
     //crear objeto de audio
   var audioCtx = new AudioContext();
   // create a stream from our AudioContext, crear stream object from audio objeto es para preparar
-  var dest = audioCtx.createMediaStreamDestination();
+ var  dest = audioCtx.createMediaStreamDestination();
  // aStream = dest.stream;
   // connect our video element's output to the stream, ya que esta asignar a aStream el stream *datos de dest
   aStream = dest.stream;
   // crear dom elemento como node del audio Ctx object
-   var sourceNode = audioCtx.createMediaElementSource(this);
+  var  sourceNode = audioCtx.createMediaElementSource(this);
   // var sourceNode = audioCtx.createMediaElementSource(aud);
   // sourceNode.connect(audioCtx.destination);
    //conectarlo al des que es el stream object
@@ -170,10 +174,16 @@ if(!vc){
   startCanvasAnim2();
   clickHandler()
   //rec.onclick = clickHandler;
-  rec.disabled = false;
+ // rec.disabled = false;
 }
 else{
-    alert("ya inic")
+    alert("ya inic");
+  //  sourceNode.connect(dest)
+    // start the video
+    this.focus();
+  this.play();
+ // sourceNode.connect(audioCtx.destination)
+  //clickHandler()
 }
 };
 
@@ -185,7 +195,7 @@ var loadVideo = function() {
   vid.crossOrigin = 'anonymous';
   vid.onplay=initAudioStream;
 //vid.oncanplay = initAudioStream;
-  vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
+ // vid.src = 'https://dl.dropboxusercontent.com/s/bch2j17v6ny4ako/movie720p.mp4';
  //  vid.src=viddata;
   
 }
@@ -249,7 +259,7 @@ function startCanvasAnim2() {
 
     canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
     canvasCtx.beginPath();
-    canvasCtx.drawImage(im,0,0,900,600)
+    canvasCtx.drawImage(im,0,0,canvas.width, canvas.height)
     var sliceWidth = canvas.width * 1.0 / bufferLength;
     var x = 0;
 /*
@@ -285,7 +295,16 @@ function test(o,el){
                  //   var image = document.createElement("img");
                  //   image.src = e.target.result;
                   if(o==="Img"){
+                    
                      im.src=e.target.result;
+                     im.onload=function(){
+                       im.width=im.naturalWidth;//im.height=im.naturalHeight;
+                       canvas.width=im.naturalWidth;
+                       canvas.height=im.naturalHeight;
+                       
+                       
+                       
+                       }
   
 
                  //    alert(im.src)
@@ -294,21 +313,11 @@ function test(o,el){
                     v.src=e.target.result;
                     v.onload=initAudioStream
                   //  alert(v.src)
-                    v.onload=v.stop();
+         //           v.onload=v.stop();
                    
                 }
-                    alert(e.target.result);
-                    //   document.body.appendChild(image);
-               //     if (t === "Texture") ObSelected.name.pic = image.src;
-               //     if (t === "Bump") ObSelected.name.bump = image.src;
-               //     if (t === "Specular") ObSelected.name.specular = image.src;
-
-
-              //      if (ObSelected.name.name === "World" && !confirm("Are you sure you want to set this background?")) return;
-              //      else dparam.style.display = "block";
-               //     params.value = JSON.stringify(ObSelected.name).replace(/{/g, "{\n").replace(/}/g, "\n}").replace(/,/g, "\n");
-
-                //    applay(params.value)
+                 //  alert(e.target.result);
+           
                }
                 reader.readAsDataURL(file);
 
