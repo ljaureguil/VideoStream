@@ -22,14 +22,18 @@ height: 100px;}
 #im{width: 80%;}
 #canvas{width: 60%;
 height: 40%;}
+#Vid{
+  display:none;
+}
     </style>
 
 <div id="dd">
   <div id="ilocal">
-    <br>Load Video:
-    <input type=file name=filename id=Vid oninput="test('Vid',this)" class=cte></input>
-    .... Load Image:
-   <input type=file name=filename id=Img oninput="test('Img',this)" class=cte></input>
+       .... Load Image:<br>  <input type=file name=filename id=Img oninput="test('Img',this)" class=cte></input>
+    <br>
+    <input type=file name=filename id=Vid oninput="test('Vid',this)" class=cte>Load Video:</input>
+  
+
   
 </div>
 
@@ -298,23 +302,17 @@ function test(o,el){
                     
                      im.src=e.target.result;
                      im.onload=function(){
-                       im.width=im.naturalWidth;//im.height=im.naturalHeight;
+                       im.width=im.naturalWidth;im.height=im.naturalHeigth;
                        canvas.width=im.naturalWidth;
                        canvas.height=im.naturalHeight;
-                       
-                       
-                       
-                       }
+                       Vid.style.display="block"
+                        }
   
-
-                 //    alert(im.src)
                   } 
                   if(o==="Vid"){
                     v.src=e.target.result;
-                    v.onload=initAudioStream
-                  //  alert(v.src)
-         //           v.onload=v.stop();
-                   
+               //     v.onload=initAudioStream
+ 
                 }
                  //  alert(e.target.result);
            
